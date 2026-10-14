@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Яблоня рефлексии | Reflection Apple Tree</title>
+  <style>
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.7);
+      --shadow: 0 12px 32px rgba(20, 45, 15, 0.25);
+      --green: #2ecc71;
+      --yellow: #f39c12;
+      --red: #e74c3c;
+      --text: #1e2d24;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #4e7a27;
+      color: var(--text);
+    }
+
+    /* Живой фон сада */
+    #garden-bg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Верхняя панель управления */
+    .top-bar {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 2px solid var(--glass-border);
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 96vw;
+    }
+
+    .counter-badge {
+      background: #27ae60;
+      color: #fff;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      box-shadow: inset 0 -2px 0 rgba(0,0,0,0.18);
+      white-space: nowrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: #ffffff;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+      background: #f9fffb;
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2ecc71, #27ae60);
+      color: #fff;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #36d97c, #2ecc71);
+    }
+
+    .btn-danger {
+      background: #fff5f5;
+      color: #c0392b;
+    }
+
+    /* Центральная сцена с деревом */
+    .stage {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 72px 16px 135px;
+      pointer-events: none;
+    }
+
+    .tree-wrapper {
+      position: relative;
+      height: min(74vh, 690px);
+      aspect-ratio: 3 / 4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      animation: treeSway 7s ease-in-out infinite alternate;
+      transform-origin: 50% 92%;
+      transition: filter 0.25s ease, transform 0.25s ease;
+    }
+
+    .tree-wrapper.drag-over {
+      filter: drop-shadow(0 0 24px rgba(255, 235, 120, 0.95));
+      transform: scale(1.02);
+    }
+
+    @keyframes treeSway {
+      0% { transform: rotate(-0.6deg); }
+      100% { transform: rotate(0.6deg); }
+    }
+
+    #tree-canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 18px 28px rgba(15, 30, 10, 0.45));
+      pointer-events: none;
+    }
+
+    /* Слоты для яблок на кроне */
+    #slots-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .apple-slot {
+      position: absolute;
+      width: clamp(28px, 4.3vh, 42px);
+      height: clamp(28px, 4.3vh, 42px);
+      transform: translate(-50%, -50%);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .apple-slot.empty {
+      opacity: 0.6;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+      animation: slotPulse 2.8s ease-in-out infinite;
+    }
+
+    @keyframes slotPulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(0.95); }
+      50% { transform: translate(-50%, -50%) scale(1.06); }
+    }
+
+    .apple-slot.filled {
+      opacity: 1;
+      animation: popIn 0.55s cubic-bezier(0.25, 1.7, 0.45, 0.95) forwards;
+      filter: drop-shadow(0 5px 8px rgba(0,0,0,0.45));
+    }
+
+    @keyframes popIn {
+      0% { transform: translate(-50%, -50%) scale(0.2) rotate(-20deg); }
+      70% { transform: translate(-50%, -50%) scale(1.22) rotate(6deg); }
+      100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+    }
+
+    /* Нижняя плашка выбора 3 яблок */
+    .dock {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 25;
+      display: flex;
+      gap: 16px;
+      padding: 12px 22px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(14px);
+      border: 2px solid var(--glass-border);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      max-width: 96vw;
+      align-items: stretch;
+    }
+
+    .choice-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.9);
+      border: 2px solid transparent;
+      cursor: grab;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+      max-width: 300px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      touch-action: none;
+    }
+
+    .choice-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+    }
+
+    .choice-card:active {
+      cursor: grabbing;
+      transform: scale(0.97);
+    }
+
+    .choice-card[data-color="green"]:hover { border-color: var(--green); }
+    .choice-card[data-color="yellow"]:hover { border-color: var(--yellow); }
+    .choice-card[data-color="red"]:hover { border-color: var(--red); }
+
+    .apple-icon {
+      width: 54px;
+      height: 54px;
+      flex-shrink: 0;
+      filter: drop-shadow(0 5px 8px rgba(0,0,0,0.2));
+      pointer-events: none;
+    }
+
+    .choice-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      pointer-events: none;
+    }
+
+    .choice-title {
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+
+    .choice-desc {
+      font-size: 0.8rem;
+      color: #4a5c50;
+      line-height: 1.25;
+    }
+
+    /* Перетаскиваемое яблоко */
+    #drag-ghost {
+      position: fixed;
+      width: 68px;
+      height: 68px;
+      pointer-events: none;
+      z-index: 100;
+      transform: translate(-50%, -50%) scale(1.15);
+      filter: drop-shadow(0 14px 18px rgba(0,0,0,0.35));
+      display: none;
+    }
+
+    /* Модальные окна */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(15, 32, 20, 0.55);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 28px;
+      padding: 28px 30px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.28);
+      transform: translateY(16px) scale(0.96);
+      transition: transform 0.25s ease;
+      text-align: center;
+    }
+
+    .modal-backdrop.active .modal-card {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-title {
+      font-size: 1.55rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: #1b3a26;
+    }
+
+    .modal-subtitle {
+      font-size: 0.92rem;
+      color: #5c7063;
+      margin-bottom: 20px;
+    }
+
+    /* Настройка количества участников */
+    .stepper-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      margin: 14px 0;
+    }
+
+    .step-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      background: #eef7f1;
+      color: #1e8449;
+      font-size: 1.6rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+    }
+
+    .step-btn:hover {
+      background: #d5f0de;
+      transform: scale(1.07);
+    }
+
+    .count-display {
+      font-size: 2.5rem;
+      font-weight: 900;
+      min-width: 80px;
+      color: #1b3a26;
+    }
+
+    .presets-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .preset-chip {
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 2px solid #e0ece4;
+      background: #f8fbf9;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-chip.active, .preset-chip:hover {
+      background: #27ae60;
+      color: #fff;
+      border-color: #27ae60;
+    }
+
+    .settings-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f5f9f6;
+      border-radius: 16px;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    /* Статистика */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .stat-box {
+      padding: 12px 8px;
+      border-radius: 16px;
+      background: #f6faf7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .stat-val {
+      font-size: 1.5rem;
+      font-weight: 900;
+    }
+
+    .stat-pct {
+      font-size: 0.85rem;
+      font-weight: 700;
+      opacity: 0.75;
+    }
+
+    .bar-chart {
+      height: 18px;
+      width: 100%;
+      background: #eaeaea;
+      border-radius: 999px;
+      overflow: hidden;
+      display: flex;
+      margin-bottom: 20px;
+    }
+
+    .bar-seg {
+      height: 100%;
+      transition: width 0.5s ease;
+    }
+
+    @media (max-width: 820px) {
+      .dock {
+        gap: 8px;
+        padding: 8px 12px;
+      }
+      .choice-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 8px 10px;
+        max-width: 30vw;
+      }
+      .choice-desc {
+        font-size: 0.72rem;
+      }
+      .apple-icon {
+        width: 40px;
+        height: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Живой фон яблоневого сада (1000116513.png + живые солнечные блики, лепестки и бабочки) -->
+  <canvas id="garden-bg"></canvas>
+
+  <!-- Верхняя панель -->
+  <header class="top-bar">
+    <div class="counter-badge" id="progress-badge">0 / 20</div>
+    <button class="btn" id="btn-stats" onclick="openStatsModal()">📊 <span data-i18n="statsBtn">Итоги</span></button>
+    <button class="btn" id="btn-refresh" onclick="resetCurrentApples()">🔄 <span data-i18n="refreshBtn">Обновить</span></button>
+    <button class="btn" id="btn-restart" onclick="openSettingsModal(true)">✨ <span data-i18n="restartBtn">Заново</span></button>
+    <button class="btn" id="btn-settings" onclick="openSettingsModal(false)">⚙️ <span data-i18n="settingsBtn">Настройки</span></button>
+    <button class="btn btn-danger" id="btn-exit" onclick="openExitModal()">🚪 <span data-i18n="exitBtn">Выход</span></button>
+  </header>
+
+  <!-- Центральная сцена с яблоней (1000116512.png) -->
+  <main class="stage">
+    <div class="tree-wrapper" id="tree-dropzone">
+      <canvas id="tree-canvas" width="900" height="1200"></canvas>
+      <div id="slots-layer"></div>
+    </div>
+  </main>
+
+  <!-- Нижняя плашка с 3 яблоками -->
+  <footer class="dock">
+    <div class="choice-card" data-color="green">
+      <div class="apple-icon" id="dock-apple-green"></div>
+      <div class="choice-text">
+        <span class="choice-title" style="color:#1e8449" data-i18n="greenTitle">Зелёное яблоко</span>
+        <span class="choice-desc" data-i18n="greenDesc">Всё понял, было очень интересно!</span>
+      </div>
+    </div>
+
+    <div class="choice-card" data-color="yellow">
+      <div class="apple-icon" id="dock-apple-yellow"></div>
+      <div class="choice-text">
+        <span class="choice-title" style="color:#d68910" data-i18n="yellowTitle">Жёлтое яблоко</span>
+        <span class="choice-desc" data-i18n="yellowDesc">Понял не всё, было не очень интересно</span>
+      </div>
+    </div>
+
+    <div class="choice-card" data-color="red">
+      <div class="apple-icon" id="dock-apple-red"></div>
+      <div class="choice-text">
+        <span class="choice-title" style="color:#c0392b" data-i18n="redTitle">Красное яблоко</span>
+        <span class="choice-desc" data-i18n="redDesc">Ничего не понятно, было скучно</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Призрак перетаскиваемого яблока -->
+  <div id="drag-ghost"></div>
+
+  <!-- Модальное окно настроек (Перед запуском) -->
+  <div class="modal-backdrop active" id="modal-settings">
+    <div class="modal-card">
+      <h2 class="modal-title" data-i18n="setupTitle">Настройка урока</h2>
+      <p class="modal-subtitle" data-i18n="setupSub">Выберите количество учеников (до 30 человек)</p>
+
+      <div class="stepper-row">
+        <button class="step-btn" onclick="changeStudentCount(-1)">−</button>
+        <div class="count-display" id="student-count-val">20</div>
+        <button class="step-btn" onclick="changeStudentCount(1)">+</button>
+      </div>
+
+      <!-- Быстрый шаг по 5-10 человек -->
+      <div class="presets-row" id="presets-container">
+        <button class="preset-chip" onclick="setStudentCount(5)">5</button>
+        <button class="preset-chip" onclick="setStudentCount(10)">10</button>
+        <button class="preset-chip" onclick="setStudentCount(15)">15</button>
+        <button class="preset-chip active" onclick="setStudentCount(20)">20</button>
+        <button class="preset-chip" onclick="setStudentCount(25)">25</button>
+        <button class="preset-chip" onclick="setStudentCount(30)">30</button>
+      </div>
+
+      <div class="settings-group">
+        <span data-i18n="soundLabel">🔊 Звуковые эффекты</span>
+        <button class="btn" id="sound-toggle-btn" onclick="toggleSound()">Вкл</button>
+      </div>
+
+      <div class="settings-group">
+        <span data-i18n="langLabel">🌐 Язык / Language</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn" id="lang-ru" onclick="setLanguage('ru')">Русский</button>
+          <button class="btn" id="lang-en" onclick="setLanguage('en')">English</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; display:flex; gap:10px; justify-content:center;">
+        <button class="btn btn-primary" style="padding: 12px 32px; font-size:1.05rem;" onclick="applySettingsAndStart()">
+          🌳 <span data-i18n="startBtn">Посадить яблоню</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно статистики -->
+  <div class="modal-backdrop" id="modal-stats">
+    <div class="modal-card">
+      <h2 class="modal-title" data-i18n="statsTitle">Итоги рефлексии</h2>
+      <p class="modal-subtitle" id="stats-summary-text">Голосов: 0 из 20</p>
+
+      <div class="bar-chart">
+        <div class="bar-seg" id="bar-green" style="background:#2ecc71; width:0%"></div>
+        <div class="bar-seg" id="bar-yellow" style="background:#f1c40f; width:0%"></div>
+        <div class="bar-seg" id="bar-red" style="background:#e74c3c; width:0%"></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box" style="border-bottom: 4px solid #2ecc71;">
+          <span style="font-weight:700; color:#1e8449;" data-i18n="greenShort">Зелёные</span>
+          <span class="stat-val" id="stat-green-count">0</span>
+          <span class="stat-pct" id="stat-green-pct">0%</span>
+        </div>
+        <div class="stat-box" style="border-bottom: 4px solid #f1c40f;">
+          <span style="font-weight:700; color:#d68910;" data-i18n="yellowShort">Жёлтые</span>
+          <span class="stat-val" id="stat-yellow-count">0</span>
+          <span class="stat-pct" id="stat-yellow-pct">0%</span>
+        </div>
+        <div class="stat-box" style="border-bottom: 4px solid #e74c3c;">
+          <span style="font-weight:700; color:#c0392b;" data-i18n="redShort">Красные</span>
+          <span class="stat-val" id="stat-red-count">0</span>
+          <span class="stat-pct" id="stat-red-pct">0%</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
+        <button class="btn" onclick="closeStatsModal()" data-i18n="continueBtn">Продолжить</button>
+        <button class="btn btn-primary" onclick="closeStatsModal(); resetCurrentApples();" data-i18n="refreshBtn">Обновить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно выхода -->
+  <div class="modal-backdrop" id="modal-exit">
+    <div class="modal-card">
+      <h2 class="modal-title" data-i18n="exitTitle">Спасибо за урок! 🌟</h2>
+      <p class="modal-subtitle" data-i18n="exitSub">Рефлексия завершена. Хотите начать новый урок?</p>
+      <div style="display:flex; gap:10px; justify-content:center; margin-top:18px;">
+        <button class="btn" onclick="closeExitModal()" data-i18n="cancelBtn">Вернуться в сад</button>
+        <button class="btn btn-primary" onclick="closeExitModal(); openSettingsModal(true);" data-i18n="newSessionBtn">Новый урок</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ================= СЛОВАРЬ RU / EN ================= */
+    const I18N = {
+      ru: {
+        statsBtn: 'Итоги',
+        refreshBtn: 'Обновить',
+        restartBtn: 'Заново',
+        settingsBtn: 'Настройки',
+        exitBtn: 'Выход',
+        greenTitle: 'Зелёное яблоко',
+        greenDesc: 'Всё понял, было очень интересно!',
+        yellowTitle: 'Жёлтое яблоко',
+        yellowDesc: 'Понял не всё, было не очень интересно',
+        redTitle: 'Красное яблоко',
+        redDesc: 'Ничего не понятно, было скучно',
+        setupTitle: 'Настройка урока',
+        setupSub: 'Выберите количество участников (до 30 учеников)',
+        soundLabel: '🔊 Звуковые эффекты',
+        soundOn: 'Вкл',
+        soundOff: 'Выкл',
+        langLabel: '🌐 Язык / Language',
+        startBtn: 'Посадить яблоню',
+        statsTitle: 'Итоги рефлексии',
+        greenShort: 'Отлично',
+        yellowShort: 'Частично',
+        redShort: 'Сложно',
+        continueBtn: 'Продолжить',
+        exitTitle: 'Спасибо за урок! 🌟',
+        exitSub: 'Рефлексия завершена. Хотите начать новый урок?',
+        cancelBtn: 'Вернуться в сад',
+        newSessionBtn: 'Новый урок',
+        summaryTpl: (done, total) => `Собрано яблок: ${done} из ${total}`
+      },
+      en: {
+        statsBtn: 'Stats',
+        refreshBtn: 'Clear',
+        restartBtn: 'Restart',
+        settingsBtn: 'Settings',
+        exitBtn: 'Exit',
+        greenTitle: 'Green Apple',
+        greenDesc: 'Understood everything, very interesting!',
+        yellowTitle: 'Yellow Apple',
+        yellowDesc: 'Understood partially, not so interesting',
+        redTitle: 'Red Apple',
+        redDesc: 'Did not understand, it was boring',
+        setupTitle: 'Lesson Setup',
+        setupSub: 'Select number of students (up to 30)',
+        soundLabel: '🔊 Sound Effects',
+        soundOn: 'On',
+        soundOff: 'Off',
+        langLabel: '🌐 Language',
+        startBtn: 'Plant the Tree',
+        statsTitle: 'Reflection Results',
+        greenShort: 'Great',
+        yellowShort: 'Partial',
+        redShort: 'Hard',
+        continueBtn: 'Continue',
+        exitTitle: 'Thank you for the lesson! 🌟',
+        exitSub: 'Reflection finished. Start a new session?',
+        cancelBtn: 'Back to Garden',
+        newSessionBtn: 'New Lesson',
+        summaryTpl: (done, total) => `Apples placed: ${done} of ${total}`
+      }
+    };
+
+    /* ================= СОСТОЯНИЕ ПРИЛОЖЕНИЯ ================= */
+    const state = {
+      lang: 'ru',
+      sound: true,
+      totalStudents: 20,
+      pendingCount: 20,
+      restartOnApply: true,
+      slots: [],
+      bursts: []
+    };
+
+    /* ================= ГЕНЕРАЦИЯ 3D-ЯБЛОК (SVG) ================= */
+    function getAppleSVG(type) {
+      if (type === 'empty') {
+        return `
+          <svg viewBox="0 0 64 64" width="100%" height="100%">
+            <path d="M32 14 C29 6, 36 3, 39 5" stroke="rgba(255,255,255,0.85)" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M32 16 C18 14, 8 25, 11 41 C14 55, 25 60, 32 56 C39 60, 50 55, 53 41 C56 25, 46 14, 32 16 Z"
+                  fill="rgba(255, 255, 255, 0.35)"
+                  stroke="rgba(255, 255, 255, 0.95)"
+                  stroke-width="2.5"
+                  stroke-dasharray="4 3"/>
+          </svg>`;
+      }
+
+      const palettes = {
+        green:  { light: '#a8ff78', mid: '#2ecc71', dark: '#145a32', leaf: '#27ae60' },
+        yellow: { light: '#fff799', mid: '#f1c40f', dark: '#9a7d0a', leaf: '#2ecc71' },
+        red:    { light: '#ff9a8b', mid: '#e74c3c', dark: '#78281f', leaf: '#27ae60' }
+      };
+      const p = palettes[type] || palettes.green;
+      const uid = type + '_' + Math.random().toString(36).slice(2, 7);
+
+      return `
+        <svg viewBox="0 0 64 64" width="100%" height="100%">
+          <defs>
+            <radialGradient id="g_${uid}" cx="35%" cy="30%" r="65%">
+              <stop offset="0%" stop-color="${p.light}"/>
+              <stop offset="45%" stop-color="${p.mid}"/>
+              <stop offset="100%" stop-color="${p.dark}"/>
+            </radialGradient>
+          </defs>
+          <path d="M32 16 C30 8, 35 4, 39 5" stroke="#5d4037" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <path d="M33 13 C40 6, 50 9, 46 16 C42 20, 35 16, 33 13 Z" fill="${p.leaf}"/>
+          <path d="M32 16 C18 13, 7 25, 10 41 C13 55, 25 60, 32 56 C39 60, 51 55, 54 41 C57 25, 46 13, 32 16 Z"
+                fill="url(#g_${uid})"/>
+          <ellipse cx="22" cy="28" rx="5" ry="9" transform="rotate(-20 22 28)" fill="rgba(255,255,255,0.45)"/>
+        </svg>`;
+    }
+
+    document.getElementById('dock-apple-green').innerHTML = getAppleSVG('green');
+    document.getElementById('dock-apple-yellow').innerHTML = getAppleSVG('yellow');
+    document.getElementById('dock-apple-red').innerHTML = getAppleSVG('red');
+
+    /* ================= ЗВУКОВОЙ СИНТЕЗАТОР (Web Audio API) ================= */
+    let audioCtx = null;
+    function playSound(kind) {
+      if (!state.sound) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const now = audioCtx.currentTime;
+        if (kind === 'pickup') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(320, now);
+          osc.frequency.exponentialRampToValueAtTime(520, now + 0.09);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.09);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.09);
+        } else if (kind === 'place') {
+          const notes = [523.25, 659.25, 783.99];
+          notes.forEach((freq, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.055);
+            gain.gain.setValueAtTime(0.18, now + idx * 0.055);
+            gain.gain.exponentialRampToValueAtTime(0.008, now + idx * 0.055 + 0.24);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(now + idx * 0.055);
+            osc.stop(now + idx * 0.055 + 0.24);
+          });
+        } else if (kind === 'complete') {
+          const chord = [523.25, 659.25, 783.99, 1046.5];
+          chord.forEach((freq, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+            gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.008, now + idx * 0.08 + 0.45);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(now + idx * 0.08);
+            osc.stop(now + idx * 0.08 + 0.45);
+          });
+        }
+      } catch (e) {}
+    }
+
+    /* ================= ЗАГРУЗКА ФОНА САДА (1000116513.png) ================= */
+    const bgImageCandidates = ['1000116513.png', '1000116513.jpg', 'bg.png', 'bg.jpg', 'garden.png', 'garden.jpg'];
+    let loadedGardenBg = null;
+
+    function tryLoadExternalGardenBg(index = 0) {
+      if (index >= bgImageCandidates.length) return;
+      const img = new Image();
+      img.onload = () => {
+        loadedGardenBg = img;
+      };
+      img.onerror = () => {
+        tryLoadExternalGardenBg(index + 1);
+      };
+      img.src = bgImageCandidates[index];
+    }
+
+    /* ================= ЗАГРУЗКА КАРТИНКИ ДЕРЕВА (1000116512.png) ================= */
+    const treeCanvas = document.getElementById('tree-canvas');
+    const treeCtx = treeCanvas.getContext('2d');
+    const candidateFiles = ['1000116512.png', 'tree.png', 'tree.jpg', 'apple-tree.png'];
+
+    function tryLoadExternalTree(index = 0) {
+      if (index >= candidateFiles.length) {
+        drawProceduralFallbackTree();
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        renderCutoutTreeImage(img);
+      };
+      img.onerror = () => {
+        tryLoadExternalTree(index + 1);
+      };
+      img.src = candidateFiles[index];
+    }
+
+    // Удаление светлого бумажного фона и бледных деревьев второго плана с 1000116512.png
+    function renderCutoutTreeImage(img) {
+      const w = treeCanvas.width;
+      const h = treeCanvas.height;
+      treeCtx.clearRect(0, 0, w, h);
+
+      const scale = Math.min(w / img.width, h / img.height);
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+      const dx = (w - dw) / 2;
+      const dy = (h - dh) / 2;
+
+      treeCtx.drawImage(img, dx, dy, dw, dh);
+
+      try {
+        const imgData = treeCtx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+
+        for (let y = 0; y < h; y++) {
+          const ny = y / h;
+          for (let x = 0; x < w; x++) {
+            const nx = x / w;
+            const i = (y * w + x) * 4;
+            const r = d[i], g = d[i + 1], b = d[i + 2];
+
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const sat = max === 0 ? 0 : (max - min) / max;
+            const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+
+            const distFromTrunk = Math.abs(nx - 0.5);
+            const isSideBackgroundZone =
+              ny > 0.60 && ny < 0.88 && distFromTrunk > 0.20;
+
+            if (luma > 236 && sat < 0.14) {
+              d[i + 3] = 0;
+            } else if (luma > 218 && sat < 0.16) {
+              d[i + 3] = Math.round(((236 - luma) / 18) * 255);
+            } else if (isSideBackgroundZone && luma > 178 && sat < 0.32) {
+              const fade = Math.max(0, (195 - luma) / 35);
+              d[i + 3] = Math.round(fade * 80);
+            }
+          }
+        }
+        treeCtx.putImageData(imgData, 0, 0);
+      } catch (err) {}
+    }
+
+    function drawProceduralFallbackTree() {
+      const w = treeCanvas.width, h = treeCanvas.height;
+      treeCtx.clearRect(0, 0, w, h);
+
+      const moundGrad = treeCtx.createRadialGradient(w * 0.5, h * 0.91, 20, w * 0.5, h * 0.92, 340);
+      moundGrad.addColorStop(0, '#6e5239');
+      moundGrad.addColorStop(0.7, '#4e3824');
+      moundGrad.addColorStop(1, 'rgba(78,56,36,0)');
+      treeCtx.fillStyle = moundGrad;
+      treeCtx.beginPath();
+      treeCtx.ellipse(w * 0.5, h * 0.91, 330, 62, 0, 0, Math.PI * 2);
+      treeCtx.fill();
+
+      treeCtx.fillStyle = '#5b4028';
+      treeCtx.beginPath();
+      treeCtx.moveTo(w * 0.42, h * 0.52);
+      treeCtx.quadraticCurveTo(w * 0.43, h * 0.74, w * 0.27, h * 0.91);
+      treeCtx.lineTo(w * 0.73, h * 0.91);
+      treeCtx.quadraticCurveTo(w * 0.57, h * 0.74, w * 0.58, h * 0.52);
+      treeCtx.closePath();
+      treeCtx.fill();
+
+      const palette = ['#44592d', '#5c743b', '#768f48', '#8ea858', '#a8bf69', '#354722'];
+      for (let i = 0; i < 2200; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const rad = Math.pow(Math.random(), 0.58);
+        const cx = w * 0.5 + Math.cos(angle) * rad * 375;
+        const cy = h * 0.34 + Math.sin(angle) * rad * 305;
+        treeCtx.save();
+        treeCtx.translate(cx, cy);
+        treeCtx.rotate(Math.random() * Math.PI);
+        treeCtx.fillStyle = palette[i % palette.length];
+        treeCtx.beginPath();
+        treeCtx.ellipse(0, 0, 12, 6, 0, 0, Math.PI * 2);
+        treeCtx.fill();
+        treeCtx.restore();
+      }
+    }
+
+    /* ================= КООРДИНАТЫ ЯБЛОК НА КРОНЕ (ДО 30 ШТУК) ================= */
+    const CROWN_COORDS = [
+      [50, 14], [36, 16], [64, 16], [24, 21], [44, 21], [57, 21], [75, 21],
+      [17, 28], [31, 27], [50, 27], [68, 27], [82, 28],
+      [14, 36], [26, 35], [39, 34], [54, 34], [65, 35], [78, 35], [86, 37],
+      [18, 44], [31, 43], [45, 42], [59, 42], [72, 43], [83, 45],
+      [23, 52], [36, 51], [50, 49], [64, 51], [76, 52]
+    ];
+
+    function buildSlots(count) {
+      const container = document.getElementById('slots-layer');
+      container.innerHTML = '';
+      state.slots = [];
+
+      for (let i = 0; i < count; i++) {
+        const [x, y] = CROWN_COORDS[i];
+        const el = document.createElement('div');
+        el.className = 'apple-slot empty';
+        el.style.left = x + '%';
+        el.style.top = y + '%';
+        el.innerHTML = getAppleSVG('empty');
+        container.appendChild(el);
+
+        state.slots.push({
+          id: i,
+          x,
+          y,
+          status: null,
+          el
+        });
+      }
+      updateCounterUI();
+    }
+
+    function colorRandomEmptySlot(color) {
+      const emptySlots = state.slots.filter(s => !s.status);
+      if (emptySlots.length === 0) return;
+
+      const chosen = emptySlots[Math.floor(Math.random() * emptySlots.length)];
+      chosen.status = color;
+      chosen.el.className = 'apple-slot filled';
+      chosen.el.innerHTML = getAppleSVG(color);
+
+      const rect = chosen.el.getBoundingClientRect();
+      spawnBurst(rect.left + rect.width / 2, rect.top + rect.height / 2, color);
+
+      playSound('place');
+      updateCounterUI();
+
+      if (emptySlots.length === 1) {
+        setTimeout(() => {
+          playSound('complete');
+          openStatsModal();
+        }, 650);
+      }
+    }
+
+    function updateCounterUI() {
+      const filled = state.slots.filter(s => s.status !== null).length;
+      document.getElementById('progress-badge').textContent = `${filled} / ${state.totalStudents}`;
+    }
+
+    /* ================= DRAG & DROP И КЛИК НА ДОСКЕ ================= */
+    let draggingColor = null;
+    const ghost = document.getElementById('drag-ghost');
+    const dropzone = document.getElementById('tree-dropzone');
+
+    document.querySelectorAll('.choice-card').forEach(card => {
+      card.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        const color = card.getAttribute('data-color');
+        draggingColor = color;
+        ghost.innerHTML = getAppleSVG(color);
+        ghost.style.display = 'block';
+        ghost.style.left = e.clientX + 'px';
+        ghost.style.top = e.clientY + 'px';
+        playSound('pickup');
+      });
+    });
+
+    window.addEventListener('pointermove', e => {
+      if (!draggingColor) return;
+      ghost.style.left = e.clientX + 'px';
+      ghost.style.top = e.clientY + 'px';
+
+      const rect = dropzone.getBoundingClientRect();
+      const inside =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+      dropzone.classList.toggle('drag-over', inside);
+    });
+
+    window.addEventListener('pointerup', e => {
+      if (!draggingColor) return;
+      const color = draggingColor;
+      draggingColor = null;
+      ghost.style.display = 'none';
+      dropzone.classList.remove('drag-over');
+
+      const rect = dropzone.getBoundingClientRect();
+      const inside =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+
+      if (inside) {
+        colorRandomEmptySlot(color);
+      }
+    });
+
+    /* ================= УПРАВЛЕНИЕ НАСТРОЙКАМИ И МОДАЛКАМИ ================= */
+    function changeStudentCount(delta) {
+      setStudentCount(state.pendingCount + delta);
+    }
+
+    function setStudentCount(val) {
+      state.pendingCount = Math.max(1, Math.min(30, val));
+      document.getElementById('student-count-val').textContent = state.pendingCount;
+      document.querySelectorAll('.preset-chip').forEach(chip => {
+        chip.classList.toggle('active', parseInt(chip.textContent, 10) === state.pendingCount);
+      });
+    }
+
+    function toggleSound() {
+      state.sound = !state.sound;
+      updateSettingsUI();
+    }
+
+    function setLanguage(lang) {
+      state.lang = lang;
+      updateSettingsUI();
+      applyTranslations();
+    }
+
+    function updateSettingsUI() {
+      const t = I18N[state.lang];
+      document.getElementById('sound-toggle-btn').textContent = state.sound ? t.soundOn : t.soundOff;
+      document.getElementById('lang-ru').classList.toggle('btn-primary', state.lang === 'ru');
+      document.getElementById('lang-en').classList.toggle('btn-primary', state.lang === 'en');
+    }
+
+    function applyTranslations() {
+      const t = I18N[state.lang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) el.textContent = t[key];
+      });
+      updateSettingsUI();
+    }
+
+    function openSettingsModal(forceRestart) {
+      state.restartOnApply = forceRestart;
+      state.pendingCount = state.totalStudents;
+      setStudentCount(state.pendingCount);
+      document.getElementById('modal-settings').classList.add('active');
+    }
+
+    function applySettingsAndStart() {
+      const countChanged = state.pendingCount !== state.totalStudents;
+      state.totalStudents = state.pendingCount;
+      if (state.restartOnApply || countChanged || state.slots.length === 0) {
+        buildSlots(state.totalStudents);
+      }
+      document.getElementById('modal-settings').classList.remove('active');
+    }
+
+    function resetCurrentApples() {
+      buildSlots(state.totalStudents);
+    }
+
+    function openStatsModal() {
+      const total = state.totalStudents;
+      const g = state.slots.filter(s => s.status === 'green').length;
+      const y = state.slots.filter(s => s.status === 'yellow').length;
+      const r = state.slots.filter(s => s.status === 'red').length;
+      const done = g + y + r;
+
+      const pct = v => (done > 0 ? Math.round((v / done) * 100) : 0);
+
+      document.getElementById('stats-summary-text').textContent = I18N[state.lang].summaryTpl(done, total);
+      document.getElementById('stat-green-count').textContent = g;
+      document.getElementById('stat-yellow-count').textContent = y;
+      document.getElementById('stat-red-count').textContent = r;
+
+      document.getElementById('stat-green-pct').textContent = pct(g) + '%';
+      document.getElementById('stat-yellow-pct').textContent = pct(y) + '%';
+      document.getElementById('stat-red-pct').textContent = pct(r) + '%';
+
+      document.getElementById('bar-green').style.width = pct(g) + '%';
+      document.getElementById('bar-yellow').style.width = pct(y) + '%';
+      document.getElementById('bar-red').style.width = pct(r) + '%';
+
+      document.getElementById('modal-stats').classList.add('active');
+    }
+
+    function closeStatsModal() {
+      document.getElementById('modal-stats').classList.remove('active');
+    }
+
+    function openExitModal() {
+      document.getElementById('modal-exit').classList.add('active');
+    }
+
+    function closeExitModal() {
+      document.getElementById('modal-exit').classList.remove('active');
+    }
+
+    /* ================= ЖИВОЙ ФОН САДА (1000116513.png + АНИМАЦИИ) ================= */
+    const bgCanvas = document.getElementById('garden-bg');
+    const bgCtx = bgCanvas.getContext('2d');
+
+    // Солнечная пыльца / боке
+    const bokehParticles = Array.from({ length: 24 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      r: 8 + Math.random() * 24,
+      vy: -0.15 - Math.random() * 0.25,
+      vx: -0.15 + Math.random() * 0.3,
+      phase: Math.random() * Math.PI * 2
+    }));
+
+    // Падающие лепестки
+    const petals = Array.from({ length: 26 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      r: 3 + Math.random() * 4,
+      vx: -0.4 + Math.random() * 1.1,
+      vy: 0.55 + Math.random() * 1.0,
+      a: Math.random() * Math.PI * 2,
+      va: -0.03 + Math.random() * 0.06
+    }));
+
+    // Бабочки
+    const butterflies = Array.from({ length: 4 }, (_, i) => ({
+      x: Math.random() * window.innerWidth,
+      y: window.innerHeight * (0.35 + Math.random() * 0.4),
+      t: Math.random() * 100,
+      color: ['#ff9ff3', '#feca57', '#54a0ff', '#ff6b6b'][i % 4]
+    }));
+
+    function spawnBurst(x, y, color) {
+      const hex = color === 'green' ? '#2ecc71' : color === 'yellow' ? '#f1c40f' : '#e74c3c';
+      for (let i = 0; i < 16; i++) {
+        const ang = (Math.PI * 2 * i) / 16;
+        const spd = 2 + Math.random() * 4;
+        state.bursts.push({
+          x,
+          y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          life: 1,
+          color: hex
+        });
+      }
+    }
+
+    function resizeBg() {
+      bgCanvas.width = window.innerWidth;
+      bgCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeBg);
+    resizeBg();
+
+    function drawGardenBackgroundImage(w, h, ts) {
+      if (loadedGardenBg) {
+        // Плавное "дыхание" камеры (лёгкий эффект живого присутствия в саду)
+        const zoom = 1.03 + Math.sin(ts * 0.00035) * 0.015;
+        const swayX = Math.cos(ts * 0.0004) * 8;
+        const swayY = Math.sin(ts * 0.0003) * 5;
+
+        const imgRatio = loadedGardenBg.width / loadedGardenBg.height;
+        const winRatio = w / h;
+        let drawW, drawH;
+
+        if (winRatio > imgRatio) {
+          drawW = w * zoom;
+          drawH = (w / imgRatio) * zoom;
+        } else {
+          drawH = h * zoom;
+          drawW = (h * imgRatio) * zoom;
+        }
+
+        const dx = (w - drawW) / 2 + swayX;
+        const dy = (h - drawH) / 2 + swayY;
+
+        bgCtx.drawImage(loadedGardenBg, dx, dy, drawW, drawH);
+
+        // Живое солнечное свечение сверху по центру аллеи (в тон 1000116513.png)
+        const pulse = 0.22 + Math.sin(ts * 0.0012) * 0.07;
+        const sunGlow = bgCtx.createRadialGradient(w * 0.48, h * 0.12, 10, w * 0.48, h * 0.25, Math.max(w, h) * 0.55);
+        sunGlow.addColorStop(0, `rgba(255, 250, 195, ${pulse})`);
+        sunGlow.addColorStop(0.45, `rgba(255, 230, 130, ${pulse * 0.45})`);
+        sunGlow.addColorStop(1, 'rgba(255, 230, 130, 0)');
+        bgCtx.fillStyle = sunGlow;
+        bgCtx.fillRect(0, 0, w, h);
+      } else {
+        // Резервный фон солнечной аллеи сада, если 1000116513.png еще не подгружен
+        const sky = bgCtx.createLinearGradient(0, 0, 0, h);
+        sky.addColorStop(0, '#fef9c3');
+        sky.addColorStop(0.5, '#bbf7d0');
+        sky.addColorStop(1, '#4d7c0f');
+        bgCtx.fillStyle = sky;
+        bgCtx.fillRect(0, 0, w, h);
+      }
+    }
+
+    function animateGarden(ts) {
+      const w = bgCanvas.width;
+      const h = bgCanvas.height;
+
+      // 1. Отрисовка фонового фото сада 1000116513.png с мягким движением и солнечными лучами
+      drawGardenBackgroundImage(w, h, ts);
+
+      // 2. Мерцающие солнечные блики боке в воздухе
+      bokehParticles.forEach(b => {
+        b.x += b.vx;
+        b.y += b.vy;
+        if (b.y < -40) { b.y = h + 40; b.x = Math.random() * w; }
+        if (b.x < -40) b.x = w + 40;
+        if (b.x > w + 40) b.x = -40;
+
+        const alpha = 0.08 + (Math.sin(ts * 0.002 + b.phase) + 1) * 0.09;
+        const grad = bgCtx.createRadialGradient(b.x, b.y, 1, b.x, b.y, b.r);
+        grad.addColorStop(0, `rgba(255, 250, 190, ${alpha})`);
+        grad.addColorStop(1, 'rgba(255, 250, 190, 0)');
+        bgCtx.fillStyle = grad;
+        bgCtx.beginPath();
+        bgCtx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        bgCtx.fill();
+      });
+
+      // 3. Лепестки яблони на ветру
+      petals.forEach(p => {
+        p.x += p.vx + Math.sin(ts * 0.001 + p.y * 0.02) * 0.3;
+        p.y += p.vy;
+        p.a += p.va;
+        if (p.y > h + 10) { p.y = -10; p.x = Math.random() * w; }
+        if (p.x > w + 10) p.x = -10;
+        if (p.x < -10) p.x = w + 10;
+
+        bgCtx.save();
+        bgCtx.translate(p.x, p.y);
+        bgCtx.rotate(p.a);
+        bgCtx.fillStyle = 'rgba(255, 248, 235, 0.85)';
+        bgCtx.beginPath();
+        bgCtx.ellipse(0, 0, p.r, p.r * 0.6, 0, 0, Math.PI * 2);
+        bgCtx.fill();
+        bgCtx.restore();
+      });
+
+      // 4. Порхающие бабочки
+      butterflies.forEach(b => {
+        b.t += 0.08;
+        b.x += Math.cos(b.t * 0.25) * 1.4;
+        b.y += Math.sin(b.t * 0.5) * 0.8;
+        if (b.x > w + 30) b.x = -30;
+        if (b.x < -30) b.x = w + 30;
+
+        const wing = Math.abs(Math.sin(b.t * 2.2));
+        bgCtx.save();
+        bgCtx.translate(b.x, b.y);
+        bgCtx.fillStyle = b.color;
+        bgCtx.beginPath();
+        bgCtx.ellipse(-5 * wing, -2, 6 * wing, 9, -0.3, 0, Math.PI * 2);
+        bgCtx.ellipse(5 * wing, -2, 6 * wing, 9, 0.3, 0, Math.PI * 2);
+        bgCtx.fill();
+        bgCtx.restore();
+      });
+
+      // 5. Салют частиц при закрашивании яблока
+      for (let i = state.bursts.length - 1; i >= 0; i--) {
+        const pt = state.bursts[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.life -= 0.03;
+        if (pt.life <= 0) {
+          state.bursts.splice(i, 1);
+          continue;
+        }
+        bgCtx.fillStyle = pt.color;
+        bgCtx.globalAlpha = pt.life;
+        bgCtx.beginPath();
+        bgCtx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+        bgCtx.fill();
+        bgCtx.globalAlpha = 1;
+      }
+
+      requestAnimationFrame(animateGarden);
+    }
+
+    // Старт приложения
+    applyTranslations();
+    buildSlots(state.totalStudents);
+    tryLoadExternalGardenBg();
+    tryLoadExternalTree();
+    requestAnimationFrame(animateGarden);
+  </script>
+</body>
+</html>
