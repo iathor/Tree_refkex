@@ -79,7 +79,7 @@
       pointer-events: none;
     }
 
-    /* 2. КОМПАКТНАЯ ОДНОСТРОЧНАЯ ВЕРХНЯЯ ПАНЕЛЬ (НЕ ПЕРЕКРЫВАЕТ ЭКРАН НА ТЕЛЕФОНЕ) */
+    /* 2. КОМПАКТНАЯ ОДНОСТРОЧНАЯ ВЕРХНЯЯ ПАНЕЛЬ */
     .top-bar {
       position: fixed;
       top: 10px;
@@ -549,7 +549,6 @@
       border-radius: 999px;
     }
 
-    /* Адаптация под узкие экраны смартфонов */
     @media (max-width: 680px) {
       .top-bar {
         top: 6px;
@@ -652,7 +651,7 @@
   <!-- Призрак перетаскиваемого яблока -->
   <div id="drag-ghost"></div>
 
-  <!-- Скрытые поля для ручного выбора картинок, если на GitHub отличается расширение -->
+  <!-- Скрытые поля для ручного выбора картинок -->
   <input type="file" id="manual-tree-input" accept="image/*" style="display:none" onchange="onManualFile(event, 'tree')" />
   <input type="file" id="manual-bg-input" accept="image/*" style="display:none" onchange="onManualFile(event, 'bg')" />
 
@@ -693,7 +692,6 @@
         </div>
       </div>
 
-      <!-- Кнопки ручной подгрузки на случай других имён файлов -->
       <div class="settings-group" style="font-size:0.8rem;">
         <span>🖼️ Свои картинки (опционально)</span>
         <div style="display:flex; gap:5px;">
@@ -945,24 +943,19 @@
     }
 
     /* ================= УМНЫЙ ПОИСК КАРТИНОК ФОНА И ЯБЛОНИ ================= */
+    const GITHUB_PAGES_BASE = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
     const RAW_BASE = 'https://raw.githubusercontent.com/iathor/Tree_refkex/main/';
 
     const BG_URLS = [
-      './1000116513.png', '1000116513.png',
-      './1000116513.jpg', '1000116513.jpg',
-      './1000116513.jpeg', './1000116513.PNG', './1000116513.JPG',
-      RAW_BASE + '1000116513.png',
-      RAW_BASE + '1000116513.jpg',
-      'bg.png', 'bg.jpg'
+      './1000116513.png',
+      GITHUB_PAGES_BASE + '1000116513.png',
+      RAW_BASE + '1000116513.png'
     ];
 
     const TREE_URLS = [
-      './1000116512.png', '1000116512.png',
-      './1000116512.jpg', '1000116512.jpg',
-      './1000116512.jpeg', './1000116512.PNG', './1000116512.JPG',
-      RAW_BASE + '1000116512.png',
-      RAW_BASE + '1000116512.jpg',
-      'tree.png', 'tree.jpg'
+      './1000116512.png',
+      GITHUB_PAGES_BASE + '1000116512.png',
+      RAW_BASE + '1000116512.png'
     ];
 
     function initBackgroundPhoto() {
@@ -1041,7 +1034,6 @@
       reader.readAsDataURL(file);
     }
 
-    // Вырезание белого бумажного фона и бледных деревьев заднего плана с 1000116512.png
     function renderCutoutTree(img) {
       const w = treeCanvas.width;
       const h = treeCanvas.height;
@@ -1054,46 +1046,12 @@
       const dy = (h - dh) / 2;
 
       treeCtx.drawImage(img, dx, dy, dw, dh);
-
-      try {
-        const imgData = treeCtx.getImageData(0, 0, w, h);
-        const d = imgData.data;
-
-        for (let y = 0; y < h; y++) {
-          const ny = y / h;
-          for (let x = 0; x < w; x++) {
-            const nx = x / w;
-            const i = (y * w + x) * 4;
-            const r = d[i], g = d[i + 1], b = d[i + 2];
-
-            const max = Math.max(r, g, b);
-            const min = Math.min(r, g, b);
-            const sat = max === 0 ? 0 : (max - min) / max;
-            const luma = 0.299 * r + 0.587 * g + 0.114 * b;
-
-            const distFromTrunk = Math.abs(nx - 0.5);
-            const isSideBackgroundZone = ny > 0.58 && ny < 0.88 && distFromTrunk > 0.19;
-
-            if (luma > 232 && sat < 0.16) {
-              d[i + 3] = 0;
-            } else if (luma > 212 && sat < 0.18) {
-              d[i + 3] = Math.round(((232 - luma) / 20) * 255);
-            } else if (isSideBackgroundZone && luma > 170 && sat < 0.34) {
-              const fade = Math.max(0, (190 - luma) / 35);
-              d[i + 3] = Math.round(fade * 70);
-            }
-          }
-        }
-        treeCtx.putImageData(imgData, 0, 0);
-      } catch (e) {}
     }
 
-    // Детализированное дерево с корнями и фактурной корой на случай, если картинка ещё не прогрузилась
     function drawDetailedBotanicalFallbackTree() {
       const w = treeCanvas.width, h = treeCanvas.height;
       treeCtx.clearRect(0, 0, w, h);
 
-      // Земляной холмик с корнями
       const moundGrad = treeCtx.createRadialGradient(w * 0.5, h * 0.91, 20, w * 0.5, h * 0.92, 350);
       moundGrad.addColorStop(0, '#6e5239');
       moundGrad.addColorStop(0.7, '#4e3824');
@@ -1103,7 +1061,6 @@
       treeCtx.ellipse(w * 0.5, h * 0.91, 330, 56, 0, 0, Math.PI * 2);
       treeCtx.fill();
 
-      // Мощный ствол и ветви
       treeCtx.fillStyle = '#5a3e28';
       treeCtx.beginPath();
       treeCtx.moveTo(w * 0.41, h * 0.48);
@@ -1113,7 +1070,6 @@
       treeCtx.closePath();
       treeCtx.fill();
 
-      // Борозды коры
       treeCtx.strokeStyle = '#3d2817';
       treeCtx.lineWidth = 3;
       for (let i = -5; i <= 5; i++) {
@@ -1123,7 +1079,6 @@
         treeCtx.stroke();
       }
 
-      // Пышная крона
       const palette = ['#354722', '#44592d', '#5c743b', '#768f48', '#8ea858', '#a8bf69'];
       for (let i = 0; i < 2600; i++) {
         const angle = Math.random() * Math.PI * 2;
